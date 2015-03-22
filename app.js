@@ -17,20 +17,7 @@ var twilio = require('twilio');
 var client = twilio(config.twilio.sid, config.twilio.token );
 
 var datamcfly = require('datamcfly');
-var messagesRef = datamcfly.init(config.datamcfly.app_name, "messages", config.datamcfly.api_key);
-
-/*
-	message:
-		-	_id
-		-	sid
-		-	type
-		-	tstamp
-		-	fromNumber
-		-	textMessage
-		-	fromCity	
-		-	fromState
-		-	fromCountry
-*/
+var postsRef = datamcfly.init(config.datamcfly.app_name, "posts", config.datamcfly.api_key);
 
 // backend routes =========================================================
 
@@ -38,30 +25,39 @@ var messagesRef = datamcfly.init(config.datamcfly.app_name, "messages", config.d
 app.post('/message', function (request, response) {
 	var d = new Date();
 	var date = d.toLocaleString();
+	
+	var postBody = request.param('Body');
+	
+	var numMedia = parseInt( request.param('NumMedia') );
+	
+	if (numMedia > 0) {
+		for (i = 0; i < numMedia; i++) {
+			var mediaUrl = request.param('MediaUrl' + i);
+			postBody += '<br /><img src="' + mediaUrl + '" />';
+		}
+	}
 
-	messagesRef.push({
+	postsRef.push({
 		sid: request.param('MessageSid'),
 		type:'text',
 		tstamp: date,
 		fromNumber:request.param('From'),
-		textMessage:request.param('Body'),
+		textMessage:postBody,
 		fromCity:request.param('FromCity'),
 		fromState:request.param('FromState'),
 		fromCountry:request.param('FromCountry')
 	});
 
 	var resp = new twilio.TwimlResponse();
-	resp.message('Thanks for the message, an agent will get back to you shortly.');
+	resp.message('Post received');
 	response.writeHead(200, {
 		'Content-Type':'text/xml'
 	});
 	response.end(resp.toString());
 });
 
-
 // frontend routes =========================================================
 
-// route to handle all frontend requests, with a password to protect unauthorized access....
 app.get('*', function(req, res) {
 	res.render('index', {
 		apikey:config.datamcfly.api_key,
